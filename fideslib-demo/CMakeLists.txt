@@ -20,10 +20,5 @@ set(CMAKE_CXX_COMPILER ${FIDESLIB_CXX_COMPILER})
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${FIDESLIB_CXX_FLAGS}")
 
 # 可执行文件
-set(SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
-file(GLOB_RECURSE CXX_SOURCE_FILES ${SOURCE_DIR}/*.cpp ${SOURCE_DIR}/*.hpp)
-set_source_files_properties(${CXX_SOURCE_FILES} PROPERTIES LANGUAGE CXX)
-
-add_executable(eval_add_demo)
-target_sources(eval_add_demo PRIVATE ${CXX_SOURCE_FILES})
+add_executable(eval_add_demo eval_add_demo.cpp)
 target_link_libraries(eval_add_demo PRIVATE fideslib::fideslib)

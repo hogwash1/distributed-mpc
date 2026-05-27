@@ -18,12 +18,7 @@ else ()
 endif ()
 
 # Executable
-set(SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
-file(GLOB_RECURSE CXX_SOURCE_FILES ${SOURCE_DIR}/*.cpp ${SOURCE_DIR}/*.hpp)
-set_source_files_properties(${CXX_SOURCE_FILES} PROPERTIES LANGUAGE CXX)
-
-add_executable(threshold_demo)
-target_sources(threshold_demo PRIVATE ${CXX_SOURCE_FILES})
+add_executable(threshold_demo threshold_demo.cpp)
 
 # Include directories - correct paths
 target_include_directories(threshold_demo PRIVATE ${OpenFHE_INCLUDE})
