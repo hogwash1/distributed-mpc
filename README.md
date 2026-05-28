@@ -110,6 +110,32 @@ sudo apt install -y libgrpc++-dev protobuf-compiler
 |:----:|------|------|:----:|
 | **甲** | [Task 1: 协议扩展](./roadmap/task-01-protocol/) | 扩展 proto + AST 序列化 | ✅ |
 | **乙** | [Task 2: 表达式解析器](./roadmap/task-02-expression-parser/) | JSON → AST 解析引擎 | ✅ |
+1. ast_common.h （数据结构基石 / 接口契约）
+作用：定义了抽象语法树（AST）的节点结构 AstNode 和支持的操作类型 OpType（加、减、乘、负号、常量、变量）。
+
+意义：它是 Task 1、Task 2 和后续 Task 3 之间沟通的“通用语言”。不管前端怎么传数据，只要转换成 AstNode，后端的计算引擎（Evaluator）就能认识它并进行同态计算。
+
+2. expr_parser.h & expr_parser.cpp （核心逻辑解析器）
+这是代码的核心部分，主要承担两大使命：
+
+使命一：翻译（序列化与反序列化）
+
+parse_json()：将前端或客户端传来的 JSON 格式字符串（例如 {"op": "add", "lhs": ...}），解析并构建成 C++ 内存中的树状结构（AST）。
+
+to_json()：把 AST 树重新打包成 JSON 字符串，主要用于调试和网络传输。
+
+使命二：质检（验证与属性分析）
+
+validate()：排雷工具。在真正丢给 OpenFHE 计算之前，提前检查公式是否有逻辑错误，比如：参与方 ID 是否超出了总人数限制、除法运算的除数是不是 0 等。
+
+compute_depth()：全同态加密（FHE）的专属雷达。在 CKKS 等同态加密方案中，密文与密文相乘会消耗“乘法深度（Multiplicative Depth）”。如果在 OpenFHE 初始化时设置深度为 3，但用户的公式深度是 4，计算就会崩溃。这个函数可以在计算前提前算出公式的深度，以判断当前加密参数是否支撑得起这个公式。
+
+collect_vars()：点名工具。遍历一遍公式，找出里面到底用到了哪几个 Party 的数据。这决定了服务器需要等待哪些人的密文集齐后才能触发计算。
+
+3. test_expr_parser.cpp （自动化测试）
+作用：针对上述所有功能编写了 6 个自动化测试用例。
+
+意义：保证你写的解析器在处理复杂嵌套公式（比如 (data1 * 2.5 + data2) / 3.0）时不会崩溃，确保功能完全符合 README.md 和 TODO.md 里的验收标准，让你能够安心提交PR。
 | **丙** | [Task 3: 同态计算引擎](./roadmap/task-03-he-evaluator/) | AST → OpenFHE 运算执行 | ✅ |
 | **丁** | [Task 4: 服务端集成](./roadmap/task-04-integration/) | 整合三个模块，端到端联调 | ⚠️ Day 3 |
 
