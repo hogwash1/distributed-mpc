@@ -21,24 +21,16 @@ distributed-mpc/
 │   └── README.md                #   详细说明
 ├── demos/                       # 单进程演示程序（无需网络）
 │   ├── three-party-average/     #   三方门限同态加密求平均值
-│   │   ├── three_party_average.cpp
-│   │   ├── CMakeLists.txt
-│   │   └── README.md
 │   ├── threshold/               #   两方门限同态加密演示
-│   │   ├── threshold_demo.cpp
-│   │   ├── CMakeLists.txt
-│   │   └── README.md
 │   └── README.md                #   演示程序总览
 ├── file-exchange/               # 基于文件交换的三方安全计算
-│   ├── party_a_file.cpp         #   Party A - 协调方
-│   ├── party_b_file.cpp         #   Party B - 参与方
-│   ├── party_c_file.cpp         #   Party C - 参与方
-│   ├── CMakeLists.txt           #   构建配置
-│   └── README.md                #   详细说明
 ├── fideslib-demo/               # FIDESlib 同态加密加法演示
-│   ├── eval_add_demo.cpp        #   加法演示程序
-│   ├── CMakeLists.txt           #   构建配置
-│   └── README.md                #   详细说明
+├── roadmap/                     # 🆕 Phase 1 开发路线图
+│   ├── README.md                #   总览：架构、分工、接口契约
+│   ├── task-01-protocol/        #   Task 1: 协议扩展与序列化
+│   ├── task-02-expression-parser/ # Task 2: 表达式解析器
+│   ├── task-03-he-evaluator/    #   Task 3: 同态计算引擎
+│   └── task-04-integration/     #   Task 4: 服务端集成与联调
 ├── .gitignore                   # Git 忽略规则
 └── README.md                    # 本文件
 ```
@@ -105,6 +97,36 @@ sudo apt install -y libgrpc++-dev protobuf-compiler
 | 🟡 中 | 无 TLS 加密 | gRPC 使用 insecure 模式 |
 | 🟡 中 | 硬编码参与方数量 | 当前固定为 3 方 |
 | 🟢 低 | 错误重试缺失 | 网络故障无自动重试 |
+
+## 开发路线图
+
+> **目标**：将当前仅支持 `average` 的系统，升级为支持**任意算术表达式**的通用安全计算平台。
+>
+> 详细分工、接口契约、TODO 清单见 [roadmap/README.md](./roadmap/README.md)
+
+### 团队分工（4人）
+
+| 成员 | 任务 | 说明 | 可立即开始 |
+|:----:|------|------|:----:|
+| **甲** | [Task 1: 协议扩展](./roadmap/task-01-protocol/) | 扩展 proto + AST 序列化 | ✅ |
+| **乙** | [Task 2: 表达式解析器](./roadmap/task-02-expression-parser/) | JSON → AST 解析引擎 | ✅ |
+| **丙** | [Task 3: 同态计算引擎](./roadmap/task-03-he-evaluator/) | AST → OpenFHE 运算执行 | ✅ |
+| **丁** | [Task 4: 服务端集成](./roadmap/task-04-integration/) | 整合三个模块，端到端联调 | ⚠️ Day 3 |
+
+### Phase 1 日程
+
+```
+Day 1-2:  Task 1、2、3 并行开发（三人独立，互不阻塞）
+Day 3:    Task 4 集成联调
+Day 4:    端到端测试 + 修复 + 合并
+```
+
+### Phase 1 验收标准
+
+- 客户端通过 JSON 表达式定义任意算术函数（`+`, `-`, `*`, `/常数`, 取负）
+- 服务器解析表达式并执行同态运算
+- 通过 `(A+B+C)/3` 和 `A×B+C` 端到端测试
+- 计算结果与明文误差 < 1e-4
 
 ## 开发指南
 
