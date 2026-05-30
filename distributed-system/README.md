@@ -36,6 +36,9 @@ Party 3 ←───────────────────────
 | `grpc_serializer.h` | OpenFHE 对象 gRPC 序列化工具（基础版） |
 | `grpc_serializer_fixed.h` | 序列化修正版 v3，使用 ciphertext-ser.h 等头文件 |
 | `CMakeLists.txt` | 构建配置（需 OpenFHE + gRPC + OpenSSL） |
+| `ast_common.h` | 定义了抽象语法树（AST）的节点结构 AstNode 和支持的操作类型 OpType（加、减、乘、负号、常量、变量）。 |
+| `expr_parser.h & expr_parser.cpp （核心逻辑解析器）` | 翻译（序列化与反序列化）质检（验证与属性分析） |
+| `test_expr_parser.cpp （自动化测试）` | 针对上述所有功能编写了 6 个自动化测试用例。 |
 
 ## 构建运行
 
