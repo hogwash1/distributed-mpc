@@ -153,6 +153,7 @@ message CiphertextChunk {
   bytes data = 4;
   bool is_last = 5;
   string checksum = 6;
+  int32 var_index = 10;            // ★ 此密文对应的变量索引 (party_id → AST VAR 的对应关系)
 }
 
 message SubmissionAck {
@@ -168,8 +169,10 @@ message ResultRequest {
 
 // 计算
 message ComputationRequest {
-  string computation_type = 1;
-  map<string, string> params = 2;
+  string computation_type = 1;          // 保留向下兼容: "average" | "sum"
+  map<string, string> params = 2;       // 保留
+  AstNodeProto expression = 10;         // ★ 新增: AST 表达式 (优先于 computation_type)
+  repeated int32 ciphertext_vars = 11;  // ★ 新增: 标识每个密文对应的变量 ID
 }
 
 message ComputationStatus {
@@ -211,3 +214,25 @@ message PartialDecryptRequest {
 }
 
 message Empty {}
+
+// ==================== AST 表达式协议 (Task 01 新增) ====================
+
+// 操作类型枚举 — 与 ast_common.h 中的 OpType 值一一对应
+enum OpType {
+  OP_ADD       = 0;
+  OP_SUB       = 1;
+  OP_MUL       = 2;
+  OP_NEGATE    = 3;
+  OP_CONST     = 4;
+  OP_VAR       = 5;
+  OP_DIV_CONST = 6;
+}
+
+// AST 节点 — 递归消息，可表示任意深度嵌套的算术表达式
+message AstNodeProto {
+  OpType op = 1;
+  double const_value  = 2;   // CONST / DIV_CONST 的值
+  int32  var_party_id = 3;   // VAR 的参与方 ID
+  AstNodeProto lhs = 4;      // 左子节点 (递归)
+  AstNodeProto rhs = 5;      // 右子节点 (递归)
+}

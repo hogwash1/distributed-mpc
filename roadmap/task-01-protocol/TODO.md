@@ -1,25 +1,25 @@
 # Task 01 — TODO 清单
 
-## Day 1
+## Phase 1 ✅ 已完成
 
-- [ ] 阅读 [roadmap/README.md](../README.md) 第四节接口契约
-- [ ] 创建 `distributed-system/ast_common.h`，实现 OpType 枚举 + AstNode + 工厂方法 + to_string + clone
-- [ ] 修改 `distributed-system/distributed_mpc.proto`：
-  - [ ] 新增 OpType 枚举
-  - [ ] 新增 AstNodeProto 递归消息
-  - [ ] 扩展 ComputationRequest（加 expression + ciphertext_vars 字段）
-  - [ ] 扩展 SubmitCiphertextRequest（加 var_index 字段）
-- [ ] 运行 `protoc` 重新生成 proto 代码，确认编译通过
+- [x] 阅读 roadmap/README.md 第四节接口契约
+- [x] 创建 `ast_common.h`（OpType + AstNode + to_string + clone）
+- [x] 修改 `distributed_mpc.proto`（OpType 枚举 + AstNodeProto + ComputationRequest/CiphertextChunk 扩展）
+- [x] protoc 编译通过
+- [x] 创建 `ast_serializer.h`（AstSerializer 类）
+- [x] 3 个测试全部通过
+- [x] 更新 CMakeLists.txt
 
-## Day 2
+## Phase 2 待办
 
-- [ ] 创建 `distributed-system/ast_serializer.h`，实现 AstSerializer 类
-- [ ] 创建 `distributed-system/test_ast_serializer.cpp`
-- [ ] 编写 3 个测试用例，全部通过
-- [ ] 更新 `CMakeLists.txt` 确保新文件被编译
-- [ ] 提交 PR，在 description 中标注接口契约无变更
+- [ ] **P0**: 修复 proto 与 gRPC 版本兼容（`protoc 3.12.4` vs 系统 `libgrpc++`）
+- [ ] **P0**: gRPC 端到端测试：Party 1 发送 AstNodeProto → compute_server 反序列化
+- [ ] **P1**: 4+ 参与方 proto 扩展（current 硬编码 3 方）
+- [ ] **P2**: t-out-of-n 门限配置消息
+- [ ] **P2**: Proto 版本号语义化管理
 
 ## 协作接口
 
-- 将 `ast_common.h` 提交后通知 **乙**（Task 2）和 **丙**（Task 3），他们需要引用此头文件
-- proto 消息 `AstNodeProto` 定义后通知 **丁**（Task 4），这是 gRPC 传输格式
+- **乙 (Task 2)**：`ast_common.h` 已交付 ✅
+- **丙 (Task 3)**：`ast_common.h` 已交付 ✅
+- **丁 (Task 4)**：`AstNodeProto` + `AstSerializer` 已交付 ✅

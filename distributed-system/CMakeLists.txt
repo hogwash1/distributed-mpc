@@ -64,6 +64,7 @@ add_executable(compute_server
     compute_server.h
     compute_server.cpp
     compute_server_main.cpp
+    he_evaluator.cpp
     ${PROTO_SRCS}
 )
 target_include_directories(compute_server PRIVATE ${ALL_INCLUDES})
@@ -78,8 +79,41 @@ add_executable(party_client
     party_client.cpp
     party_client_main.cpp
     grpc_serializer.h
+    expr_parser.cpp
     ${PROTO_SRCS}
 )
 target_include_directories(party_client PRIVATE ${ALL_INCLUDES})
 target_link_directories(party_client PRIVATE ${OpenFHE_LIBDIR})
 target_link_libraries(party_client PRIVATE ${ALL_LIBS})
+
+# ============================================
+# Test: AST Serializer (Task 01 — no OpenFHE/gRPC needed)
+# ============================================
+set(TEST_AST_SRCS
+    test_ast_serializer.cpp
+    "${CMAKE_CURRENT_SOURCE_DIR}/proto-generated/distributed_mpc.pb.cc"
+)
+add_executable(test_ast_serializer ${TEST_AST_SRCS})
+target_include_directories(test_ast_serializer PRIVATE ${ALL_INCLUDES})
+target_link_libraries(test_ast_serializer PRIVATE protobuf)
+
+# ============================================
+# Test: Expression Parser (Task 02 — no deps)
+# ============================================
+add_executable(test_expr_parser
+    test_expr_parser.cpp
+    expr_parser.cpp
+)
+target_include_directories(test_expr_parser PRIVATE ${ALL_INCLUDES})
+
+# ============================================
+# Test: Integration (Task 04 — OpenFHE needed, no gRPC)
+# ============================================
+add_executable(test_integration
+    test_integration.cpp
+    expr_parser.cpp
+    he_evaluator.cpp
+)
+target_include_directories(test_integration PRIVATE ${ALL_INCLUDES})
+target_link_directories(test_integration PRIVATE ${OpenFHE_LIBDIR})
+target_link_libraries(test_integration PRIVATE ${OpenFHE_LIBRARIES})

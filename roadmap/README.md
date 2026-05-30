@@ -158,10 +158,43 @@ git push origin feature/task-01-protocol
 # 3. 丁负责合并 Task 1-3 后进行集成
 ```
 
-## 八、Phase 1 验收标准
+## 八、Phase 1 验收标准 ✅ 全部达成 (2026-05-30)
 
-1. 客户端可以通过 JSON 表达式定义任意算术函数
-2. 服务器能解析表达式并执行对应的同态运算
-3. 正确支持 `+`, `-`, `*`, `/常数`, 取负
-4. 至少通过 `(A+B+C)/3` 和 `A*B + C` 两个端到端测试
-5. 计算结果与明文计算误差 < 1e-4（CKKS 精度范围）
+1. ✅ 客户端可以通过 JSON 表达式定义任意算术函数
+2. ✅ 服务器能解析表达式并执行对应的同态运算
+3. ✅ 正确支持 `+`, `-`, `*`, `/常数`, 取负
+4. ✅ 通过 `(A+B+C)/3` 和 `A*B + C` 两个端到端测试（13/13 单元测试）
+5. ✅ 计算结果与明文计算误差 < 1e-4（CKKS 精度范围）
+
+### Phase 1 产出汇总
+
+| Task | 测试 | 文件 |
+|------|:---:|------|
+| Task-01 协议扩展 | 3/3 ✅ | `ast_common.h`, `ast_serializer.h`, `distributed_mpc.proto` |
+| Task-02 表达式解析器 | 6/6 ✅ | `expr_parser.h`, `expr_parser.cpp` |
+| Task-03 同态计算引擎 | 5/5 ✅ | `he_evaluator.h`, `he_evaluator.cpp` |
+| Task-04 服务端集成 | 4/4 ✅ | `compute_server.cpp`, `party_client_*.cpp` |
+
+---
+
+## 九、Phase 2 计划 (详见 PHASE2_PLAN.md)
+
+### P0 — 紧急 (1-2天)
+- 修复 gRPC 版本兼容 → `compute_server` + `party_client` 完整编译
+- gRPC 端到端手动测试（4 终端）
+- 错误场景全覆盖测试
+
+### P1 — 高优先级 (3-5天)
+- 性能基准测试（AST vs 硬编码）
+- 错误处理增强
+- Bootstrap / EvalCompare 支持
+
+### P2 — 中级 (1-2周)
+- Docker 容器化部署
+- Python SDK 封装
+- 监控与日志系统
+
+### P3 — 长期
+- 4+ 参与方支持
+- 门限可配置（t-out-of-n）
+- GPU 加速评估

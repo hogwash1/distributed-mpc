@@ -6,6 +6,8 @@
 //==================================================================================
 
 #include "compute_server.h"
+#include "he_evaluator.h"
+#include "ast_serializer.h"
 #include <iostream>
 #include <sstream>
 
@@ -326,32 +328,111 @@ Status ComputeServerGrpcService::TriggerComputation(
     }
 
     try {
-        // 反序列化所有密文
-        std::vector<Ciphertext<DCRTPoly>> ciphertexts;
-        for (auto& [id, party] : state_->parties) {
-            auto ct = OpenFHEGrpcSerializer::DeserializeCiphertextFromBytes(
-                party.ciphertext_data, state_->cc);
-            ciphertexts.push_back(ct);
-            std::cout << "[Server] Party " << id << " 密文已加载" << std::endl;
-        }
-
-        // 同态计算
         Ciphertext<DCRTPoly> result;
-        if (comp_type == "average" || comp_type == "sum") {
-            result = ciphertexts[0];
-            for (size_t i = 1; i < ciphertexts.size(); i++) {
-                result = state_->cc->EvalAdd(result, ciphertexts[i]);
+
+        // ============================================================
+        // NEW: AST expression-based computation (Task 04 integration)
+        // ============================================================
+        if (request->has_expression()) {
+            std::cout << "[Server] 使用 AST 表达式求值..." << std::endl;
+
+            // 1. Deserialize AST from proto
+            auto ast = mpc::AstSerializer::deserialize(request->expression());
+            std::cout << "[Server] AST:\n" << ast->to_string() << std::endl;
+
+            // 2. Build var_map: party_id → Ciphertext
+            std::map<int32_t, Ciphertext<DCRTPoly>> var_map;
+            const auto& var_ids = request->ciphertext_vars();
+
+            // Collect ciphertexts keyed by party_id
+            for (size_t i = 0; i < var_ids.size(); i++) {
+                int32_t vid = var_ids.Get(i);
+                auto it = state_->parties.find(vid);
+                if (it == state_->parties.end()) {
+                    response->set_completed(false);
+                    response->set_has_error(true);
+                    response->set_error("Unknown party_id in ciphertext_vars: " + std::to_string(vid));
+                    return Status::OK;
+                }
+                auto ct = OpenFHEGrpcSerializer::DeserializeCiphertextFromBytes(
+                    it->second.ciphertext_data, state_->cc);
+                var_map[vid] = ct;
+                std::cout << "[Server] var_map[" << vid << "] = Party " << vid << " ciphertext" << std::endl;
             }
-            if (comp_type == "average") {
-                double divisor = static_cast<double>(ciphertexts.size());
-                result = state_->cc->EvalMult(result, 1.0 / divisor);
-                result = state_->cc->ModReduce(result);
+
+            // 3. Validate AST against available variables
+            auto missing = mpc::ExprParser::validate(ast, var_map.size());
+            // Also check that all vars in AST have corresponding ciphertexts
+            auto used_vars = mpc::ExprParser::collect_vars(ast);
+            for (auto v : used_vars) {
+                if (var_map.find(v) == var_map.end()) {
+                    response->set_completed(false);
+                    response->set_has_error(true);
+                    response->set_error("Missing ciphertext for variable party_id=" + std::to_string(v));
+                    return Status::OK;
+                }
             }
+
+            // 4. Check depth against configured multiplicative depth
+            int ast_depth = mpc::ExprParser::compute_depth(ast);
+            uint32_t max_depth = state_->cc->GetEncodingParams()->GetMultiplicativeDepth();
+            if (ast_depth > static_cast<int>(max_depth)) {
+                std::ostringstream oss;
+                oss << "AST depth " << ast_depth
+                    << " exceeds configured multiplicative depth " << max_depth;
+                response->set_completed(false);
+                response->set_has_error(true);
+                response->set_error(oss.str());
+                return Status::OK;
+            }
+            std::cout << "[Server] AST depth=" << ast_depth
+                      << " (max=" << max_depth << ") OK" << std::endl;
+
+            // 5. Evaluate with HeEvaluator
+            mpc::HeEvaluator evaluator(state_->cc, state_->joint_public_key, var_map);
+            result = evaluator.evaluate(ast);
+            result = state_->cc->ModReduce(result);
+
+            std::cout << "[Server] HeEvaluator: ops=" << evaluator.get_op_count()
+                      << " depth_consumed=" << evaluator.get_depth_consumed() << std::endl;
+
         } else {
-            response->set_completed(false);
-            response->set_has_error(true);
-            response->set_error("Unknown computation type: " + comp_type);
-            return Status::OK;
+            // ============================================================
+            // OLD: backward-compatible average/sum logic
+            // ============================================================
+            std::string comp_type = request->computation_type();
+            std::cout << "[Server] 使用传统 computation_type: " << comp_type << std::endl;
+
+            // 反序列化所有密文
+            std::vector<Ciphertext<DCRTPoly>> ciphertexts;
+            for (auto& [id, party] : state_->parties) {
+                auto ct = OpenFHEGrpcSerializer::DeserializeCiphertextFromBytes(
+                    party.ciphertext_data, state_->cc);
+                ciphertexts.push_back(ct);
+                std::cout << "[Server] Party " << id << " 密文已加载" << std::endl;
+            }
+
+            if (comp_type == "average" || comp_type == "sum") {
+                result = ciphertexts[0];
+                for (size_t i = 1; i < ciphertexts.size(); i++) {
+                    result = state_->cc->EvalAdd(result, ciphertexts[i]);
+                }
+                if (comp_type == "average") {
+                    double divisor = static_cast<double>(ciphertexts.size());
+                    result = state_->cc->EvalMult(result, 1.0 / divisor);
+                    result = state_->cc->ModReduce(result);
+                }
+            } else if (comp_type.empty()) {
+                response->set_completed(false);
+                response->set_has_error(true);
+                response->set_error("No expression and no computation_type specified");
+                return Status::OK;
+            } else {
+                response->set_completed(false);
+                response->set_has_error(true);
+                response->set_error("Unknown computation type: " + comp_type);
+                return Status::OK;
+            }
         }
 
         // 存储结果

@@ -1,29 +1,22 @@
 # Task 03 — TODO 清单
 
-## Day 1
+## Phase 1 ✅ 已完成
 
-- [ ] 阅读 [roadmap/README.md](../README.md) 第四节接口契约
-- [ ] 从 Task 1（甲）获取 `ast_common.h`，或按接口契约自行创建临时版本
-- [ ] 创建 `distributed-system/he_evaluator.h`，定义 `HeEvaluator` 类
-- [ ] 实现 `eval_node()` 递归求值函数：
-  - [ ] ADD / SUB / MUL / NEGATE 使用对应的 OpenFHE 方法
-  - [ ] CONST 使用明文运算优化策略
-  - [ ] VAR 直接从 vars_ map 获取
-  - [ ] DIV_CONST 使用乘以倒数实现
-- [ ] 实现操作日志输出
+- [x] 阅读接口契约 + 创建 `ast_common.h`
+- [x] 创建 `he_evaluator.h` + `he_evaluator.cpp`（7 种 OpType，策略 A CONST 优化）
+- [x] 5 个测试全部通过（误差 < 1e-4）
+- [x] 修复 Plaintext 单 slot bug（`make_scalar_plaintext()`）
+- [x] 修复 VAR 深拷贝（EvalMult 共享指针混叠）
+- [x] 测试环境适配（非 MULTIPARTY + EvalMultKey）
 
-## Day 2
+## Phase 2 待办
 
-- [ ] 创建 `distributed-system/test_he_evaluator.cpp`
-- [ ] 编写测试用例 1：两方加法
-- [ ] 编写测试用例 2：三方平均值
-- [ ] 编写测试用例 3：多项式 data₁² + data₁·2 + 1
-- [ ] 编写测试用例 4：深度追踪验证
-- [ ] 编写测试用例 5：缺失变量异常处理
-- [ ] 确保所有测试通过
-- [ ] 提交 PR
+- [ ] **P1**: Bootstrap 刷新密文（突破 multDepth 限制）
+- [ ] **P1**: EvalCompare / EvalChebyshevSeries 非线性运算
+- [ ] **P1**: 多方 (MULTIPARTY) 环境完整测试
+- [ ] **P2**: GPU CUDA 加速评估（RTX 4060）
+- [ ] **P2**: 性能基准测试（100 节点 AST 延迟）
 
 ## 协作接口
 
-- 完成后通知 **丁**（Task 4）：提供 `HeEvaluator` 的完整接口和使用示例
-- 特别是 `evaluate()` 方法的签名和 `vars` map 的 key/value 含义
+- **丁 (Task 4)**：`HeEvaluator` 已集成到 `compute_server` ✅

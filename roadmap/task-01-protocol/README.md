@@ -1,123 +1,82 @@
 # Task 01 — 协议扩展与序列化
 
-> **负责人：甲**
-> **预计工时：2 天**
-> **依赖：无（可立即开始）**
+> **负责人：甲 | Phase 1: ✅ 完成 | Phase 2: 待开始**  
+> **提交：2026-05-30**
 
 ---
 
-## 任务目标
+## Phase 1 完成的工作
 
-扩展 `distributed_mpc.proto` 协议和 `grpc_serializer`，使系统能够通过网络传输"计算表达式"，而不仅仅是"单一密文"。
+扩展分布式多方安全计算系统的 gRPC 协议，新增 AST 表达式支持，实现 AST 与 Proto 消息的双向转换。
 
-## 当前状态
+### 产出文件
 
-- `distributed_mpc.proto` 中 `ComputationRequest` 只有一个 `computation_type` 字符串字段（值固定为 `"average"`）
-- `compute_server.cpp` 中 `TriggerComputation` 只能硬编码执行 `EvalAdd` 循环
-- 多方数据各自独立上传，没有标识哪个密文对应哪个变量
+| 文件 | 说明 |
+|------|------|
+| `distributed-system/ast_common.h` | AST 接口契约 — OpType枚举(7种)、AstNode结构体、工厂方法、to_string()递归打印、clone()深拷贝 |
+| `distributed-system/distributed_mpc.proto` | 协议扩展 — 新增 OpType 枚举、AstNodeProto 递归消息、ComputationRequest+expression/ciphertext_vars、CiphertextChunk+var_index |
+| `distributed-system/ast_serializer.h` | AST↔Proto 双向转换 — AstSerializer 类，header-only 实现 |
+| `distributed-system/test_ast_serializer.cpp` | 3个往返测试用例 |
+| `distributed-system/CMakeLists.txt` | 新增 test_ast_serializer 构建目标 |
+| `distributed-system/proto-generated/` | protoc 生成的 C++ 代码 |
 
-## 需要完成的工作
-
-### 1.1 创建 AST 公共头文件
-
-**文件**：`distributed-system/ast_common.h`
-
-包含 `OpType` 枚举和 `AstNode` 结构体定义（见 [roadmap/README.md](../README.md) 第四节接口契约）。
-
-要求：
-- 实现全部 4 个工厂方法
-- 添加 `to_string()` 方法用于调试输出
-- 添加 `clone()` 深拷贝方法
-
-### 1.2 扩展 Proto 协议
-
-**文件**：`distributed-system/distributed_mpc.proto`
-
-新增以下消息类型：
+### Proto 协议变更
 
 ```protobuf
-// 操作类型枚举
-enum OpType {
-  OP_ADD = 0;
-  OP_SUB = 1;
-  OP_MUL = 2;
-  OP_NEGATE = 3;
-  OP_CONST = 4;
-  OP_VAR = 5;
-  OP_DIV_CONST = 6;
-}
+// 新增 OpType 枚举 (与 C++ AstNode 对应)
+enum OpType { OP_ADD=0; OP_SUB=1; OP_MUL=2; OP_NEGATE=3; OP_CONST=4; OP_VAR=5; OP_DIV_CONST=6; }
 
-// AST 节点（递归结构）
-message AstNodeProto {
-  OpType op = 1;
-  double const_value = 2;
-  int32 var_party_id = 3;
-  AstNodeProto lhs = 4;
-  AstNodeProto rhs = 5;
-}
+// 新增 AstNodeProto 递归消息
+message AstNodeProto { OpType op=1; double const_value=2; int32 var_party_id=3; AstNodeProto lhs=4; AstNodeProto rhs=5; }
 
-// 扩展 ComputationRequest
-// 在已有的 ComputationRequest 中新增字段：
-//   AstNodeProto expression = 10;
-//   repeated int32 ciphertext_vars = 11;  // 标识每个密文对应的变量 ID
+// ComputationRequest 扩展 (保留向下兼容)
+message ComputationRequest { ..., AstNodeProto expression=10; repeated int32 ciphertext_vars=11; }
 
-// 扩展 SubmitCiphertextRequest
-// 新增字段：
-//   int32 var_index = 10;  // 此密文对应的变量索引
+// CiphertextChunk 扩展
+message CiphertextChunk { ..., int32 var_index=10; }
 ```
 
-修改 `ComputationRequest`，保留 `computation_type` 字段向下兼容，新增 `expression` 字段。
+---
 
-### 1.3 实现 AST ↔ Proto 序列化
+## 测试方法
 
-**文件**：`distributed-system/ast_serializer.h`
+### 编译
 
-```cpp
-namespace mpc {
-
-class AstSerializer {
-public:
-    // C++ AST → Proto 消息
-    static distributed_mpc::AstNodeProto serialize(
-        const std::shared_ptr<AstNode>& node);
-    
-    // Proto 消息 → C++ AST
-    static std::shared_ptr<AstNode> deserialize(
-        const distributed_mpc::AstNodeProto& proto);
-};
-
-} // namespace mpc
+```bash
+cd distributed-system
+mkdir build && cd build
+cmake .. -DCMAKE_PREFIX_PATH=/usr/local/lib/OpenFHE
+make test_ast_serializer -j$(nproc)
 ```
 
-要求：正确处理递归嵌套结构，不做扁平化。
+### 运行测试
 
-### 1.4 更新 CMakeLists.txt
+```bash
+./build/test_ast_serializer
+```
 
-在 `distributed-system/CMakeLists.txt` 中：
-- 确保 `ast_common.h` 和 `ast_serializer.h` 被 include
-- 确认 proto 生成代码路径正确
+### 测试用例
 
-### 1.5 编写单元测试
+| # | 内容 | 结果 |
+|---|------|:---:|
+| 1 | `(A+B)*C` 序列化往返 | ✅ |
+| 2 | 5层嵌套 `((-A-B+5)*C)/2` 往返 | ✅ |
+| 3 | 叶子节点 CONST、VAR、DIV_CONST | ✅ |
 
-**文件**：`distributed-system/test_ast_serializer.cpp`
-
-测试用例：
-1. 构造 `(A+B)*C` → 序列化 → 反序列化 → 验证结构一致
-2. 构造嵌套 5 层的表达式 → 序列化往返
-3. 边界测试：单节点（CONST / VAR）
-
-## 产出清单
-
-| 文件 | 状态 |
-|------|:----:|
-| `distributed-system/ast_common.h` | 新建 |
-| `distributed-system/ast_serializer.h` | 新建 |
-| `distributed-system/distributed_mpc.proto` | 修改 |
-| `distributed-system/test_ast_serializer.cpp` | 新建 |
+---
 
 ## 验收标准
 
-- [ ] `ast_common.h` 所有工厂方法可正常构造 AST
-- [ ] proto 编译通过（`protoc` 无报错）
-- [ ] `AstSerializer::serialize/deserialize` 往返后 AST 完全一致
-- [ ] 测试用例全部通过
+- [x] `ast_common.h` 所有工厂方法可正常构造 AST
+- [x] Proto 文件通过 `protoc` 编译，无报错
+- [x] `AstSerializer::serialize()` / `deserialize()` 往返后 AST 完全一致
+- [x] 三个测试用例全部通过
+- [x] 接口契约无变更
+
+## Phase 2 待办
+
+- [ ] 修复 proto 与 WSL gRPC 版本兼容性（`protoc 3.12.4` → 需升级或重新生成）
+- [ ] gRPC 端到端测试：验证 AstNodeProto 通过 gRPC 传输
+- [ ] 支持 4+ 参与方的 proto 扩展
+- [ ] 门限可配置（t-out-of-n）的消息类型
+- [ ] Proto 消息版本号管理

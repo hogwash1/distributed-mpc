@@ -2,8 +2,10 @@
 build/
 cmake-build-*/
 out/
+dist/
+compile_commands.json
 
-# Proto generated (regenerate via make)
+# Proto generated (regenerate via protoc)
 proto-generated/
 
 # IDE
@@ -38,8 +40,18 @@ cmake_install.cmake
 Makefile
 *.cmake
 
-# Trae
+# AI assistant internal
+.workbuddy/
 .trae/
+.codebuddy/
+
+# Core dumps
+core
+*.core
 
 # Logs
 *.log
+
+# Temp
+*.tmp
+tmp/

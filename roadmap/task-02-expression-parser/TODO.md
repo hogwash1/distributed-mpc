@@ -1,26 +1,23 @@
 # Task 02 — TODO 清单
 
-## Day 1
+## Phase 1 ✅ 已完成
 
-- [ ] 阅读 [roadmap/README.md](../README.md) 第四节接口契约
-- [ ] 从 Task 1（甲）获取 `ast_common.h`，或按接口契约自行创建临时版本
-- [ ] 决定 JSON 解析方案：
-  - [ ] 方案 A：引入 `nlohmann/json.hpp`（推荐，单头文件）
-  - [ ] 方案 B：手写极简 JSON 解析器（如果不想引入外部依赖）
-- [ ] 创建 `distributed-system/expr_parser.h`，定义 `ExprParser` 类接口
-- [ ] 实现 `parse_json()` 递归下降解析
-- [ ] 实现 `to_json()` 反序列化
+- [x] 阅读接口契约，引用 `ast_common.h`
+- [x] 创建 `expr_parser.h` + `expr_parser.cpp`（7 种 OpType 递归解析）
+- [x] `parse_json()` / `to_json()` — JSON ↔ AST 双向转换
+- [x] `validate()` / `compute_depth()` / `collect_vars()` — AST 分析工具
+- [x] 6 个测试全部通过
+- [x] 内置极简 JSON Scanner（零外部依赖）
 
-## Day 2
+## Phase 2 待办
 
-- [ ] 实现 `validate()` — AST 合法性校验
-- [ ] 实现 `compute_depth()` — 乘法深度计算
-- [ ] 实现 `collect_vars()` — 变量收集
-- [ ] 创建 `distributed-system/test_expr_parser.cpp`
-- [ ] 编写全部 6 个测试用例并通过
-- [ ] 提交 PR
+- [ ] **P1**: 比较操作表达式（`gt`/`lt`/`eq` for EvalCompare）
+- [ ] **P1**: 条件分支语法（`{"op":"if","cond":...,"then":...,"else":...}`）
+- [ ] **P1**: 表达式白名单/黑名单过滤
+- [ ] **P2**: 性能基准测试（100 节点 AST 解析延迟）
+- [ ] **P3**: YAML 格式输入支持
 
 ## 协作接口
 
-- 通知 **丙**（Task 3）：`AstNode` 结构可正常工作，他可以开始开发 evaluator
-- 通知 **丁**（Task 4）：JSON 格式规范可参考本文 README 中的表格
+- **丙 (Task 3)**：`parse_json()` 输出可直传 `HeEvaluator` ✅
+- **丁 (Task 4)**：`--expr` 参数已集成 ✅

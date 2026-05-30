@@ -9,11 +9,15 @@
 //==================================================================================
 
 #include "party_client.h"
+#include "expr_parser.h"
+#include "ast_serializer.h"
 #include <iostream>
 #include <memory>
 #include <csignal>
 #include <atomic>
 #include <thread>
+#include <fstream>
+#include <sstream>
 
 std::atomic<bool> g_shutdown{false};
 
@@ -34,6 +38,7 @@ int main(int argc, char** argv) {
     std::string server_address = "localhost:60001";
     int32_t p2p_port = 0;
     std::string data_str = "10,20,30,40,50,60,70,80,90,100,110,120,130,140,150,160";
+    std::string expr_json;  // ★ 新增: JSON 表达式
 
     for (int i = 1; i < argc; i++) {
         std::string arg = argv[i];
@@ -42,9 +47,14 @@ int main(int argc, char** argv) {
         else if (arg == "--server" && i + 1 < argc) server_address = argv[++i];
         else if (arg == "--p2p-port" && i + 1 < argc) p2p_port = std::atoi(argv[++i]);
         else if (arg == "--data" && i + 1 < argc) data_str = argv[++i];
+        else if (arg == "--expr" && i + 1 < argc) expr_json = argv[++i];        // ★ 新增
+        else if (arg == "--expr-file" && i + 1 < argc) {                         // ★ 新增
+            std::ifstream f(argv[++i]);
+            if (f) { std::ostringstream ss; ss << f.rdbuf(); expr_json = ss.str(); }
+        }
         else if (arg == "--help") {
             std::cout << "用法: party_client --id <N> --name <名称> --server <地址> "
-                      << "--p2p-port <端口> --data <数据>" << std::endl;
+                      << "--p2p-port <端口> --data <数据> [--expr <JSON表达式>] [--expr-file <文件>]" << std::endl;
             return 0;
         }
     }
@@ -172,6 +182,7 @@ int main(int argc, char** argv) {
             grpc_chunk.set_data(chunk.data.data(), chunk.data.size());
             grpc_chunk.set_is_last(chunk.is_last);
             grpc_chunk.set_checksum(chunk.checksum);
+            grpc_chunk.set_var_index(party_id);  // ★ var_index = party_id for ciphertext-var mapping
             writer->Write(grpc_chunk);
         }
         writer->WritesDone();
@@ -203,7 +214,23 @@ int main(int argc, char** argv) {
                 && status_resp.ciphertexts_received() >= status_resp.total_parties()) {
 
                 distributed_mpc::ComputationRequest comp_req;
-                comp_req.set_computation_type("average");
+                if (!expr_json.empty()) {
+                    // ★ 新流程: 发送 AST 表达式
+                    try {
+                        auto ast = mpc::ExprParser::parse_json(expr_json);
+                        auto vars = mpc::ExprParser::collect_vars(ast);
+                        auto proto = mpc::AstSerializer::serialize(ast);
+                        *comp_req.mutable_expression() = proto;
+                        for (auto v : vars) comp_req.add_ciphertext_vars(v);
+                        std::cout << "[Client] 发送表达式: " << expr_json << std::endl;
+                    } catch (const std::exception& e) {
+                        std::cerr << "[Client] 表达式解析失败: " << e.what() << std::endl;
+                        break;
+                    }
+                } else {
+                    // ★ 旧流程: 向下兼容
+                    comp_req.set_computation_type("average");
+                }
                 distributed_mpc::ComputationStatus comp_status;
                 grpc::ClientContext comp_ctx;
 

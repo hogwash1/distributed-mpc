@@ -1,31 +1,37 @@
 # Task 04 — TODO 清单
 
-## Day 1 — 理解与重构
+## Phase 1 ✅ 已完成
 
-- [ ] 阅读 [compute_server.cpp](file:///d:/桌面文件夹/TARE_SOLO工作目录/隐私计算demo/distributed-system/compute_server.cpp) 中 `SubmitCiphertext` 和 `TriggerComputation` 的完整实现
-- [ ] 阅读 [party_client.cpp](file:///d:/桌面文件夹/TARE_SOLO工作目录/隐私计算demo/distributed-system/party_client.cpp) 中数据加密上传和部分解密的流程
-- [ ] 确认 Task 1-3 的代码已合并到 dev 分支，拉取最新代码
-- [ ] 重构 `compute_server.cpp` 的 `TriggerComputation`：
-  - [ ] 检查 `has_expression()`，有则使用新流程
-  - [ ] 反序列化 AST → 建立 var_map → 调用 HeEvaluator
-  - [ ] 保留旧流程作为 else 分支
-- [ ] 修改 `party_client.cpp`：
-  - [ ] 新增 `--expr` 命令行参数（从 JSON 文件或字符串读取）
-  - [ ] 在触发计算时将表达式序列化发送
-  - [ ] 上传密文时标注 var_index
+- [x] 拷贝 `he_evaluator` 到 `distributed-system/`
+- [x] 重构 `compute_server.cpp` TriggerComputation（has_expression 分支 + HeEvaluator）
+- [x] 修改 `party_client_main.cpp`（--expr / --expr-file 参数）
+- [x] 修改 `party_client.cpp`（var_index 标注）
+- [x] 更新 CMakeLists.txt
+- [x] 4 个集成测试全部通过
+- [x] 向下兼容旧 average/sum
 
-## Day 2 — 测试与修复
+## Phase 2 进行中
 
-- [ ] 更新 `CMakeLists.txt`，添加新源文件和 include
-- [ ] 编译通过，无警告
-- [ ] 手动测试用例 1：两方加法 `data₁ + data₂`
-- [ ] 手动测试用例 2：三方平均值 `(A+B+C)/3`
-- [ ] 手动测试用例 3：混合运算 `A×B + C`
-- [ ] 手动测试用例 4：向下兼容（旧版 `computation_type = "average"`）
-- [ ] 错误场景测试：非法 party_id、缺失变量、深度超限
-- [ ] 修复所有问题后提交 PR
+- [ ] **P0**：修复 gRPC 版本兼容 — proto 生成代码与系统 libgrpc++ 不匹配
+  - 当前：`protoc 3.12.4` 生成的 `grpc.pb.cc` 使用 `CallbackServerContext` 等新版 API
+  - 方案 A：用匹配的 protoc/grpc 版本重新生成
+  - 方案 B：升级 WSL 中的 libgrpc++ 到 v1.40+
+- [ ] **P0**：gRPC 端到端手动测试
+  - 4 终端启动 compute_server + 3 个 party_client
+  - 测试 JSON 表达式 `(A+B+C)/3`
+  - 测试混合运算 `A*B + C`
+  - 验证与旧版 average 结果一致（误差 < 1e-4）
+- [ ] **P0**：错误场景测试（非法 party_id、缺失变量、深度超限）
 
-## 协作接口
+## Phase 2 待办
 
-- 作为最终集成的负责人，需要在 Task 1-3 完成后合并代码并解决冲突
-- 如果 Task 1-3 的接口有变化，需要通知对应负责人调整
+- [ ] **P1**：性能基准测试
+- [ ] **P2**：Docker 容器化（Dockerfile + docker-compose.yml）
+- [ ] **P2**：Python SDK 封装
+- [ ] **P2**：监控与日志（Prometheus metrics + Grafana dashboard）
+- [ ] **P3**：4+ 参与方支持
+
+## 已知问题
+
+- `compute_server` 和 `party_client` 因 gRPC 版本不兼容无法编译（WSL libgrpc++ is older than generated code）
+- 独立测试（test_ast_serializer / test_expr_parser / test_integration）全部通过
